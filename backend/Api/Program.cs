@@ -28,8 +28,9 @@ app.UseRouting();
 app.UseAuthorization();
 app.MapControllers();
 
-Console.WriteLine("🚀 Budget API Started!");
-Console.WriteLine($"📊 Database: {builder.Configuration.GetConnectionString("DefaultConnection") ?? "budget.db"}");
-Console.WriteLine($"� Allowing CORS from: {builder.Configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:5173"}");
+Console.WriteLine("Workout API started.");
+Console.WriteLine($"Database: {builder.Configuration.GetConnectionString("DefaultConnection") ?? "workout.db"}");
+Console.WriteLine(
+    $"CORS origin: {builder.Configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:5173"}");
 
 app.Run();

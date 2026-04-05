@@ -26,9 +26,9 @@ public static class ServiceCollectionExtensions
         {
             c.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "Budget API",
+                Title = "Workout API",
                 Version = "v1",
-                Description = "Budget Management API"
+                Description = "Workout planning and session logging API"
             });
         });
         
@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddDatabaseConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection") 
-            ?? "Data Source=budget.db";
+            ?? "Data Source=workout.db";
             
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(connectionString));
@@ -55,7 +55,12 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy("AllowFrontend", policy =>
             {
-                policy.WithOrigins(frontendUrl)
+                // Common dev/preview hosts (127.0.0.1 vs localhost matters for browser same-origin).
+                policy.WithOrigins(
+                        frontendUrl,
+                        "http://127.0.0.1:5173",
+                        "http://localhost:4173",
+                        "http://127.0.0.1:4173")
                       .AllowAnyHeader()
                       .AllowAnyMethod()
                       .AllowCredentials();

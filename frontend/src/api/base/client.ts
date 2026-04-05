@@ -1,5 +1,5 @@
 // frontend/src/api/base/client.ts
-import { Effect } from 'effect'
+import { Effect, ParseResult } from 'effect'
 
 // Custom error type for better error handling
 export class ApiError extends Error {
@@ -9,8 +9,10 @@ export class ApiError extends Error {
   }
 }
 
-// Base configuration
-const BASE_URL = 'http://localhost:5000/api'
+// Dev: Vite proxies `/api` → backend (no CORS issues). Preview/build: set VITE_API_BASE or fall back to API on :5000.
+const BASE_URL =
+  (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ??
+  (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
 const DEFAULT_HEADERS = { 'Content-Type': 'application/json' }
 
 // Effect-based HTTP client using native fetch (no Axios)
@@ -61,6 +63,19 @@ export const httpClient = {
       console.log(`✅ PUT ${BASE_URL}${url} - ${response.status}`)
     }),
 
+  putJson: <T, B = unknown>(url: string, data: B): Effect.Effect<T, ApiError> =>
+    Effect.tryPromise(async () => {
+      const response = await fetch(`${BASE_URL}${url}`, {
+        method: 'PUT',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        throw new ApiError(`PUT failed: ${response.statusText}`, response.status)
+      }
+      return response.json() as Promise<T>
+    }),
+
   delete: (url: string): Effect.Effect<void, ApiError> =>
     Effect.tryPromise(async () => {
       console.log(`DELETE ${BASE_URL}${url}`)
@@ -76,6 +91,27 @@ export const httpClient = {
     }),
 }
 
-// Helper to run Effect requests
-export const runRequest = <A, E>(effect: Effect.Effect<A, E>) =>
-  Effect.runPromise(effect)
+/** Runs an API Effect and surfaces fetch / schema errors with clear messages. */
+export const runRequest = async <A, E>(effect: Effect.Effect<A, E>): Promise<A> => {
+  try {
+    return await Effect.runPromise(effect)
+  } catch (e: unknown) {
+    if (ParseResult.isParseError(e)) {
+      throw new Error(
+        `API response did not match expected shape: ${ParseResult.TreeFormatter.formatErrorSync(e)}`,
+      )
+    }
+    if (e instanceof ApiError) {
+      throw e
+    }
+    if (e instanceof TypeError) {
+      throw new Error(
+        `${e.message}. Is the API running? With the Vite dev server, use relative /api (proxy) or set VITE_API_BASE.`,
+      )
+    }
+    if (e instanceof Error) {
+      throw e
+    }
+    throw new Error(String(e))
+  }
+}

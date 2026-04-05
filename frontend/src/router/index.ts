@@ -1,49 +1,36 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
-import HomeDetailsView from '@/views/HomeDetailsView.vue'
-import InboxView from '@/views/InboxView.vue'
-import CalendarView from '@/views/CalendarView.vue'
-import SearchView from '@/views/SearchView.vue'
-import SettingsView from '@/views/SettingsView.vue'
+
+import PlanDetailView from '@/views/PlanDetailView.vue'
+import PlanListView from '@/views/PlanListView.vue'
+import WorkoutView from '@/views/WorkoutView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      redirect: '/workout',
     },
     {
-      path: '/home/details',
-      name: 'home-details',
-      component: HomeDetailsView,
+      path: '/plan',
+      name: 'plan',
+      component: PlanListView,
+    },
+    {
+      path: '/plan/:planId',
+      name: 'plan-detail',
+      component: PlanDetailView,
       meta: {
         breadcrumbs: [
-          { label: 'Home', path: '/' },
-          { label: 'Details', path: '/home/details' },
+          { label: 'Plan', path: '/plan' },
+          { label: 'Setup', path: '' },
         ],
       },
     },
     {
-      path: '/inbox',
-      name: 'inbox',
-      component: InboxView,
-    },
-    {
-      path: '/calendar',
-      name: 'calendar',
-      component: CalendarView,
-    },
-    {
-      path: '/search',
-      name: 'search',
-      component: SearchView,
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: SettingsView,
+      path: '/workout',
+      name: 'workout',
+      component: WorkoutView,
     },
   ],
 })
