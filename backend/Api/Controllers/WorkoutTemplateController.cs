@@ -35,10 +35,18 @@ public class WorkoutTemplateController : BaseController<WorkoutTemplate>
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             return BadRequest("Name is required.");
+        if (dto.Exercises is not { Count: > 0 })
+            return BadRequest("At least one exercise is required.");
 
         var planExists = await _context.Plans.AnyAsync(p => p.Id == dto.PlanId);
         if (!planExists)
             return NotFound("Plan not found.");
+
+        foreach (var ex in dto.Exercises.OrderBy(e => e.SortOrder))
+        {
+            if (string.IsNullOrWhiteSpace(ex.Name))
+                return BadRequest("Each exercise needs a name.");
+        }
 
         var template = new WorkoutTemplate
         {
@@ -66,7 +74,7 @@ public class WorkoutTemplateController : BaseController<WorkoutTemplate>
                 SortOrder = ex.SortOrder,
                 TargetSets = ex.TargetSets,
                 TargetReps = ex.TargetReps,
-                TargetWeightKg = ex.TargetWeightKg,
+                TargetWeightLbs = ex.TargetWeightLbs,
             });
         }
 
@@ -78,7 +86,7 @@ public class WorkoutTemplateController : BaseController<WorkoutTemplate>
 
         created.Exercises = created.Exercises.OrderBy(e => e.SortOrder).ToList();
 
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+        return StatusCode(StatusCodes.Status201Created, created);
     }
 
     [HttpPut("{id:int}/with-exercises")]
@@ -109,7 +117,7 @@ public class WorkoutTemplateController : BaseController<WorkoutTemplate>
                 SortOrder = ex.SortOrder,
                 TargetSets = ex.TargetSets,
                 TargetReps = ex.TargetReps,
-                TargetWeightKg = ex.TargetWeightKg,
+                TargetWeightLbs = ex.TargetWeightLbs,
             });
         }
 

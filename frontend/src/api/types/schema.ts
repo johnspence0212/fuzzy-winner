@@ -23,7 +23,7 @@ export const ExerciseDefinitionSchema = Schema.Struct({
   sortOrder: Schema.Number,
   targetSets: Schema.Number,
   targetReps: Schema.Number,
-  targetWeightKg: optionalNullOr(Schema.Number),
+  targetWeightLbs: optionalNullOr(Schema.Number),
 })
 
 export const WorkoutTemplateSchema = Schema.Struct({
@@ -56,7 +56,7 @@ export const PerformedSetResponseSchema = Schema.Struct({
   exerciseNameSnapshot: optionalNullOr(Schema.String),
   setIndex: Schema.Number,
   reps: Schema.Number,
-  weightKg: optionalNullOr(Schema.Number),
+  weightLbs: optionalNullOr(Schema.Number),
 })
 
 export const WorkoutSessionResponseSchema = Schema.Struct({

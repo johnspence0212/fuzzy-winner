@@ -4,7 +4,7 @@ export interface ExerciseItemRequest {
   targetSets: number
   targetReps: number
   /** Omit or leave unset when not using a target weight */
-  targetWeightKg?: number
+  targetWeightLbs?: number
 }
 
 export interface CreateWorkoutTemplateRequest {
@@ -37,7 +37,7 @@ export interface PerformedSetRequest {
   exerciseNameSnapshot?: string | null
   setIndex: number
   reps: number
-  weightKg?: number | null
+  weightLbs?: number | null
 }
 
 export interface CreateWorkoutSessionRequest {

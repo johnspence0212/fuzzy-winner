@@ -11,7 +11,7 @@ public class PerformedSetConfiguration : BaseEntityConfiguration<PerformedSet>
         base.Configure(builder);
 
         builder.Property(p => p.ExerciseNameSnapshot).HasMaxLength(200);
-        builder.Property(p => p.WeightKg).HasPrecision(10, 2);
+        builder.Property(p => p.WeightLbs).HasPrecision(10, 2);
 
         builder.HasOne(p => p.WorkoutSession)
             .WithMany(s => s.PerformedSets)

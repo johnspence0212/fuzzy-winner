@@ -7,7 +7,7 @@ public class ExerciseDefinition : BaseEntity
     public int SortOrder { get; set; }
     public int TargetSets { get; set; }
     public int TargetReps { get; set; }
-    public decimal? TargetWeightKg { get; set; }
+    public decimal? TargetWeightLbs { get; set; }
 
     public WorkoutTemplate WorkoutTemplate { get; set; } = null!;
 }

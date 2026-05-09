@@ -80,7 +80,7 @@ public class WorkoutSessionController : ControllerBase
                 ExerciseNameSnapshot = snapshot,
                 SetIndex = s.SetIndex,
                 Reps = s.Reps,
-                WeightKg = s.WeightKg,
+                WeightLbs = s.WeightLbs,
             });
         }
 
@@ -138,7 +138,7 @@ public class WorkoutSessionController : ControllerBase
                 ExerciseNameSnapshot = p.ExerciseNameSnapshot,
                 SetIndex = p.SetIndex,
                 Reps = p.Reps,
-                WeightKg = p.WeightKg,
+                WeightLbs = p.WeightLbs,
             }).ToList(),
         };
     }

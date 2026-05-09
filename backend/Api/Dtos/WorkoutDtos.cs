@@ -6,7 +6,7 @@ public sealed class ExerciseItemDto
     public int SortOrder { get; set; }
     public int TargetSets { get; set; }
     public int TargetReps { get; set; }
-    public decimal? TargetWeightKg { get; set; }
+    public decimal? TargetWeightLbs { get; set; }
 }
 
 public sealed class CreateWorkoutTemplateDto
@@ -60,7 +60,7 @@ public sealed class PerformedSetDto
     public string? ExerciseNameSnapshot { get; set; }
     public int SetIndex { get; set; }
     public int Reps { get; set; }
-    public decimal? WeightKg { get; set; }
+    public decimal? WeightLbs { get; set; }
 }
 
 public sealed class CreateWorkoutSessionDto
@@ -92,5 +92,5 @@ public sealed class PerformedSetResponseDto
     public string? ExerciseNameSnapshot { get; set; }
     public int SetIndex { get; set; }
     public int Reps { get; set; }
-    public decimal? WeightKg { get; set; }
+    public decimal? WeightLbs { get; set; }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Api.Data;
@@ -8,7 +9,11 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddControllers();
+        services.AddControllers().AddJsonOptions(o =>
+        {
+            // WorkoutTemplate <-> ExerciseDefinition (and similar) cause cycles; serializer throws without this.
+            o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        });
         services.AddEndpointsApiExplorer();
         services.AddSwaggerConfiguration();
         services.AddDatabaseConfiguration(configuration);

@@ -18,7 +18,7 @@ interface SetInputRow {
   setLabel: string
   setIndex: number
   reps: number
-  weightKg?: number
+  weightLbs?: number
 }
 
 const plans = ref<Plan[]>([])
@@ -65,7 +65,7 @@ const rebuildSets = (t: WorkoutTemplate) => {
         setLabel: `${ex.name} · set ${s + 1}`,
         setIndex: setIndex++,
         reps: ex.targetReps,
-        ...(ex.targetWeightKg != null ? { weightKg: ex.targetWeightKg } : {}),
+        ...(ex.targetWeightLbs != null ? { weightLbs: ex.targetWeightLbs } : {}),
       })
     }
   }
@@ -169,11 +169,11 @@ const finishWorkout = async () => {
         exerciseNameSnapshot: r.exerciseNameSnapshot,
         setIndex: r.setIndex,
         reps: Number.isFinite(r.reps) ? r.reps : 0,
-        weightKg:
-          r.weightKg === undefined ||
-          (typeof r.weightKg === 'number' && Number.isNaN(r.weightKg))
+        weightLbs:
+          r.weightLbs === undefined ||
+          (typeof r.weightLbs === 'number' && Number.isNaN(r.weightLbs))
             ? null
-            : r.weightKg,
+            : r.weightLbs,
       })),
     })
     sessionNotes.value = ''
@@ -256,8 +256,8 @@ const finishWorkout = async () => {
               <Input v-model.number="row.reps" class="h-11 w-full" min="0" type="number" />
             </div>
             <div>
-              <label class="text-muted-foreground text-xs">Weight (kg)</label>
-              <Input v-model.number="row.weightKg" class="h-11 w-full" step="0.5" type="number" />
+              <label class="text-muted-foreground text-xs">Weight (lbs)</label>
+              <Input v-model.number="row.weightLbs" class="h-11 w-full" step="0.5" type="number" />
             </div>
           </div>
         </div>
@@ -298,7 +298,7 @@ const finishWorkout = async () => {
             <ul class="mt-1 space-y-0.5">
               <li v-for="set in s.sets" :key="set.id">
                 {{ set.exerciseNameSnapshot ?? 'Set' }} · {{ set.reps }} reps
-                <span v-if="set.weightKg != null"> @ {{ set.weightKg }} kg</span>
+                <span v-if="set.weightLbs != null"> @ {{ set.weightLbs }} lb</span>
               </li>
             </ul>
           </li>

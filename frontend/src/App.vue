@@ -35,7 +35,7 @@ const breadcrumbs = computed(() => {
 <template>
   <SidebarProvider>
     <AppSidebar />
-    <SidebarInset class="min-h-svh">
+    <SidebarInset class="min-h-0 min-h-svh">
       <header class="flex h-14 shrink-0 items-center gap-2 border-b px-4">
         <SidebarTrigger class="-ml-1" />
         <Separator class="mr-2 h-4" orientation="vertical" />
@@ -54,7 +54,7 @@ const breadcrumbs = computed(() => {
           </template>
         </nav>
       </header>
-      <div class="flex min-h-0 flex-1 flex-col">
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain">
         <router-view />
       </div>
     </SidebarInset>

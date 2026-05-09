@@ -11,7 +11,7 @@ public class ExerciseDefinitionConfiguration : BaseEntityConfiguration<ExerciseD
         base.Configure(builder);
 
         builder.Property(e => e.Name).IsRequired().HasMaxLength(200);
-        builder.Property(e => e.TargetWeightKg).HasPrecision(10, 2);
+        builder.Property(e => e.TargetWeightLbs).HasPrecision(10, 2);
 
         builder.HasOne(e => e.WorkoutTemplate)
             .WithMany(t => t.Exercises)
