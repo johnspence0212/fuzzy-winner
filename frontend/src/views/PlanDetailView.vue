@@ -379,7 +379,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-lg flex-col gap-6 p-4 pb-24">
+  <div class="flex w-full flex-col gap-6 p-4 pb-24 sm:p-6 lg:px-8 lg:py-6">
     <Button class="h-10 w-fit" variant="ghost" type="button" @click="goBack">← All plans</Button>
 
     <p v-if="loading" class="text-muted-foreground text-sm">Loading…</p>
@@ -389,7 +389,7 @@ const goBack = () => {
       <!-- Title row: what you’re editing + explicit save -->
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div class="min-w-0 space-y-1">
-          <h1 class="text-2xl font-semibold tracking-tight">Plan setup</h1>
+          <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Plan setup</h1>
           <p class="text-muted-foreground text-sm">
             Saves the <span class="text-foreground font-medium">plan name and notes</span> below.
           </p>
@@ -407,19 +407,21 @@ const goBack = () => {
       <p v-if="saveMessage" class="text-sm text-emerald-600 dark:text-emerald-400">{{ saveMessage }}</p>
       <p v-if="error && plan" class="text-destructive text-sm">{{ error }}</p>
 
-      <section class="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
+      <section class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
         <h2 class="text-sm font-medium">Plan details</h2>
-        <div class="space-y-2">
-          <label class="text-sm font-medium" for="edit-name">Name</label>
-          <Input id="edit-name" v-model="editPlanName" class="h-11 w-full" type="text" />
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium" for="edit-notes">Notes</label>
-          <Input id="edit-notes" v-model="editPlanNotes" class="h-11 w-full" type="text" />
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="space-y-2">
+            <label class="text-sm font-medium" for="edit-name">Name</label>
+            <Input id="edit-name" v-model="editPlanName" class="h-11 w-full" type="text" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium" for="edit-notes">Notes</label>
+            <Input id="edit-notes" v-model="editPlanNotes" class="h-11 w-full" type="text" />
+          </div>
         </div>
       </section>
 
-      <section class="space-y-4 rounded-lg border bg-card p-4 shadow-sm">
+      <section class="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-sm font-medium">Workouts</h2>
           <Sheet v-model:open="addWorkoutOpen">
@@ -529,11 +531,11 @@ const goBack = () => {
           </Sheet>
         </div>
 
-        <ul class="flex flex-col gap-3">
+        <ul class="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
           <li
             v-for="t in templates"
             :key="t.id"
-            class="hover:bg-muted/40 cursor-pointer rounded-md border bg-background/60 text-sm transition-colors"
+            class="hover:bg-muted/40 cursor-pointer rounded-lg border bg-background/60 text-sm transition-colors"
             role="button"
             tabindex="0"
             :aria-label="`Edit workout ${t.name}`"
@@ -541,7 +543,7 @@ const goBack = () => {
             @keydown.enter.prevent="openWorkoutEdit(t.id)"
             @keydown.space.prevent="openWorkoutEdit(t.id)"
           >
-            <div class="px-3 py-3">
+            <div class="px-3 py-3 sm:px-4 sm:py-4">
               <div class="flex items-start justify-between gap-2">
                 <div class="font-medium">{{ t.name }}</div>
                 <span class="text-muted-foreground shrink-0 text-xs">Edit</span>
@@ -554,13 +556,13 @@ const goBack = () => {
               </ul>
             </div>
           </li>
-          <li v-if="!templates.length" class="text-muted-foreground text-sm">
+          <li v-if="!templates.length" class="text-muted-foreground text-sm sm:col-span-full">
             No workouts yet. Tap + to add one.
           </li>
         </ul>
 
         <Dialog v-model:open="editDialogOpen">
-          <DialogContent class="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogContent class="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
             <div class="flex max-h-[min(90vh,800px)] flex-col">
               <DialogHeader class="shrink-0 border-b px-6 pt-6 pb-4">
                 <DialogTitle>Edit workout</DialogTitle>
@@ -645,7 +647,7 @@ const goBack = () => {
         </Dialog>
       </section>
 
-      <section class="space-y-4 rounded-lg border bg-card p-4 shadow-sm">
+      <section class="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div class="min-w-0 space-y-1">
             <h2 class="text-sm font-medium">Rotating schedule</h2>
@@ -662,7 +664,7 @@ const goBack = () => {
             {{ savingSchedule ? 'Saving…' : 'Save schedule' }}
           </Button>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid max-w-md grid-cols-2 gap-3">
           <div>
             <label class="text-muted-foreground text-xs">Sessions / week</label>
             <Input v-model.number="sessionsPerWeek" class="h-11 w-full" min="1" type="number" />
@@ -673,11 +675,11 @@ const goBack = () => {
           </div>
         </div>
 
-        <ul class="flex flex-col gap-3">
+        <ul class="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
           <li
             v-for="sl in slotAssignments"
             :key="`${sl.weekIndex}-${sl.sessionIndex}`"
-            class="flex flex-col gap-2 rounded-md border bg-background/60 p-3"
+            class="flex flex-col gap-2 rounded-lg border bg-background/60 p-3 sm:p-4"
           >
             <span class="text-sm font-medium">{{ slotLabel(sl.weekIndex, sl.sessionIndex) }}</span>
             <select

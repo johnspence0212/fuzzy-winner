@@ -79,9 +79,9 @@ const createPlan = async () => {
 </script>
 
 <template>
-  <div class="relative mx-auto flex w-full max-w-lg flex-col gap-6 p-4 pb-28">
+  <div class="relative flex w-full flex-col gap-6 p-4 pb-28 sm:p-6 lg:px-8 lg:py-6">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight">Plans</h1>
+      <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Plans</h1>
       <p class="text-muted-foreground text-sm">
         Build programs, workouts, and your rotating schedule here.
       </p>
@@ -91,14 +91,14 @@ const createPlan = async () => {
 
     <section v-if="loading" class="text-muted-foreground text-sm">Loading…</section>
 
-    <ul v-else class="flex flex-col gap-3">
+    <ul v-else class="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
       <li
         v-for="p in plans"
         :key="p.id"
-        class="rounded-lg border bg-card shadow-sm transition-colors active:bg-accent/40"
+        class="rounded-xl border bg-card shadow-sm transition-colors active:bg-accent/40"
       >
         <router-link
-          class="flex flex-col gap-1 p-4"
+          class="flex h-full flex-col gap-1 p-4 sm:p-5"
           :to="{ name: 'plan-detail', params: { planId: String(p.id) } }"
         >
           <span class="font-medium">{{ p.name }}</span>
@@ -108,7 +108,7 @@ const createPlan = async () => {
       </li>
       <li
         v-if="!plans.length"
-        class="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+        class="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm sm:col-span-full"
       >
         No plans yet. Tap the + button to create one.
       </li>

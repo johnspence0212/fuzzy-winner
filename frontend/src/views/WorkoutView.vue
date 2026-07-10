@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Activity, Dumbbell, Flame, Weight } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { runRequest } from '@/api/base/client'
@@ -53,6 +54,58 @@ const scheduleHints = computed(() => {
   }))
 })
 
+const totalWorkouts = computed(() => recentSessions.value.length)
+
+const totalWeightLifted = computed(() => {
+  let total = 0
+  for (const session of recentSessions.value) {
+    for (const set of session.sets) {
+      if (set.weightLbs != null && set.reps > 0) {
+        total += set.weightLbs * set.reps
+      }
+    }
+  }
+  return total
+})
+
+/** Consecutive calendar days with at least one session, counting back from today or the most recent session day. */
+const currentStreak = computed(() => {
+  const days = new Set(
+    recentSessions.value.map((s) => {
+      const d = new Date(s.performedAt)
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    }),
+  )
+  if (days.size === 0) return 0
+
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+  const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+
+  // If nothing today, start from the most recent session day
+  if (!days.has(key(cursor))) {
+    const latest = recentSessions.value
+      .map((s) => new Date(s.performedAt).getTime())
+      .reduce((a, b) => Math.max(a, b), 0)
+    cursor.setTime(latest)
+    cursor.setHours(0, 0, 0, 0)
+  }
+
+  let streak = 0
+  while (days.has(key(cursor))) {
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+})
+
+const formatWeight = (lbs: number) => {
+  if (lbs >= 1000) {
+    return `${(lbs / 1000).toFixed(lbs >= 10000 ? 0 : 1)}k`
+  }
+  return lbs.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
 const rebuildSets = (t: WorkoutTemplate) => {
   const rows: SetInputRow[] = []
   let setIndex = 1
@@ -97,7 +150,7 @@ const loadPlanContext = async () => {
   const [t, sch, sessions] = await Promise.all([
     workoutTemplateApi.getByPlan(id),
     scheduleApi.get(id),
-    workoutSessionApi.listForPlan(id, 15),
+    workoutSessionApi.listForPlan(id, 100),
   ])
   templates.value = [...t]
   schedule.value = sch
@@ -190,10 +243,12 @@ const finishWorkout = async () => {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-lg flex-col gap-6 p-4 pb-28">
-    <header class="space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight">Workout</h1>
-      <p class="text-muted-foreground text-sm">Log today’s session. Set up plans under Plan.</p>
+  <div class="flex w-full flex-col gap-6 p-4 pb-28 sm:p-6 lg:px-8 lg:py-6">
+    <header class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div class="space-y-1">
+        <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Workout</h1>
+        <p class="text-muted-foreground text-sm">Log today’s session. Set up plans under Plan.</p>
+      </div>
     </header>
 
     <p v-if="loading" class="text-muted-foreground text-sm">Loading…</p>
@@ -201,83 +256,157 @@ const finishWorkout = async () => {
       <p v-if="error" class="text-destructive text-sm">{{ error }}</p>
       <p v-if="success" class="text-sm text-emerald-600 dark:text-emerald-400">{{ success }}</p>
 
-      <section class="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
-        <h2 class="text-sm font-medium">Plan</h2>
-        <select
-          v-model.number="selectedPlanId"
-          class="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
-        >
-          <option :value="0" disabled>Select…</option>
-          <option v-for="p in plans" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-        <p v-if="!plans.length" class="text-muted-foreground text-sm">
-          No plans yet.
-          <router-link class="text-primary font-medium underline-offset-2 hover:underline" to="/plan">
-            Create a plan
-          </router-link>
-          first.
-        </p>
+      <!-- Stats -->
+      <section class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div class="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <div class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase">
+            <Dumbbell class="h-3.5 w-3.5" />
+            Total workouts
+          </div>
+          <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+            {{ totalWorkouts }}
+          </p>
+          <p class="text-muted-foreground mt-1 text-xs">Completed sessions</p>
+        </div>
+
+        <div class="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <div class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase">
+            <Weight class="h-3.5 w-3.5" />
+            Total weight lifted
+          </div>
+          <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+            {{ formatWeight(totalWeightLifted) }}
+            <span class="text-muted-foreground text-base font-medium">lb</span>
+          </p>
+          <p class="text-muted-foreground mt-1 text-xs">Volume · reps × weight</p>
+        </div>
+
+        <div class="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <div class="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase">
+            <Flame class="h-3.5 w-3.5" />
+            Current streak
+          </div>
+          <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+            {{ currentStreak }}
+            <span class="text-muted-foreground text-base font-medium">
+              {{ currentStreak === 1 ? 'day' : 'days' }}
+            </span>
+          </p>
+          <p class="text-muted-foreground mt-1 text-xs">
+            {{ currentStreak > 0 ? 'Keep showing up' : 'Log a session to start' }}
+          </p>
+        </div>
       </section>
 
-      <section v-if="selectedPlanId" class="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
-        <h2 class="text-sm font-medium">Schedule (read-only)</h2>
-        <p v-if="!scheduleHints.length" class="text-muted-foreground text-sm">No schedule saved for this plan.</p>
-        <ul v-else class="flex flex-col gap-2 text-sm">
-          <li
+      <!-- Setup -->
+      <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <h2 class="flex items-center gap-2 text-sm font-medium">
+            <Activity class="text-muted-foreground h-4 w-4" />
+            Plan
+          </h2>
+          <select
+            v-model.number="selectedPlanId"
+            class="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
+          >
+            <option :value="0" disabled>Select…</option>
+            <option v-for="p in plans" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+          <p v-if="!plans.length" class="text-muted-foreground text-sm">
+            No plans yet.
+            <router-link class="text-primary font-medium underline-offset-2 hover:underline" to="/plan">
+              Create a plan
+            </router-link>
+            first.
+          </p>
+        </div>
+
+        <div v-if="selectedPlanId" class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+          <h2 class="text-sm font-medium">Today’s workout</h2>
+          <select
+            v-model.number="selectedTemplateId"
+            class="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
+          >
+            <option :value="0" disabled>Select workout…</option>
+            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+          </select>
+          <p v-if="!templates.length" class="text-muted-foreground text-sm">Add workouts in Plan setup.</p>
+        </div>
+      </section>
+
+      <!-- Schedule -->
+      <section
+        v-if="selectedPlanId"
+        class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+      >
+        <h2 class="text-sm font-medium">Schedule</h2>
+        <p v-if="!scheduleHints.length" class="text-muted-foreground text-sm">
+          No schedule saved for this plan.
+        </p>
+        <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div
             v-for="(h, i) in scheduleHints"
             :key="i"
-            class="text-muted-foreground flex justify-between gap-2"
+            class="bg-muted/40 flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm"
           >
-            <span>{{ h.label }}</span>
-            <span class="text-foreground font-medium">{{ h.templateName }}</span>
-          </li>
-        </ul>
+            <span class="text-muted-foreground">{{ h.label }}</span>
+            <span class="font-medium">{{ h.templateName }}</span>
+          </div>
+        </div>
       </section>
 
-      <section v-if="selectedPlanId" class="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
-        <h2 class="text-sm font-medium">Today’s workout</h2>
-        <select
-          v-model.number="selectedTemplateId"
-          class="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
-        >
-          <option :value="0" disabled>Select workout…</option>
-          <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
-        </select>
-        <p v-if="!templates.length" class="text-muted-foreground text-sm">Add workouts in Plan setup.</p>
-      </section>
-
-      <section v-if="selectedTemplateId && setRows.length" class="space-y-4 rounded-lg border bg-card p-4 shadow-sm">
-        <h2 class="text-sm font-medium">Sets</h2>
-        <div v-for="row in setRows" :key="row.setIndex" class="space-y-2 rounded-md border bg-background/60 p-3">
-          <div class="text-sm font-medium">{{ row.setLabel }}</div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-muted-foreground text-xs">Reps</label>
-              <Input v-model.number="row.reps" class="h-11 w-full" min="0" type="number" />
-            </div>
-            <div>
-              <label class="text-muted-foreground text-xs">Weight (lbs)</label>
-              <Input v-model.number="row.weightLbs" class="h-11 w-full" step="0.5" type="number" />
+      <!-- Sets -->
+      <section
+        v-if="selectedTemplateId && setRows.length"
+        class="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+      >
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="text-sm font-medium">Sets</h2>
+          <p class="text-muted-foreground text-xs">{{ setRows.length }} sets to log</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div
+            v-for="row in setRows"
+            :key="row.setIndex"
+            class="space-y-2 rounded-lg border bg-background/60 p-3 sm:p-4"
+          >
+            <div class="text-sm font-medium">{{ row.setLabel }}</div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-muted-foreground text-xs">Reps</label>
+                <Input v-model.number="row.reps" class="h-11 w-full" min="0" type="number" />
+              </div>
+              <div>
+                <label class="text-muted-foreground text-xs">Weight (lbs)</label>
+                <Input v-model.number="row.weightLbs" class="h-11 w-full" step="0.5" type="number" />
+              </div>
             </div>
           </div>
         </div>
-        <div class="space-y-2">
+        <div class="max-w-md space-y-2">
           <label class="text-sm font-medium" for="session-notes">Notes (optional)</label>
-          <Input id="session-notes" v-model="sessionNotes" class="h-11 w-full" placeholder="How it felt…" />
+          <Input
+            id="session-notes"
+            v-model="sessionNotes"
+            class="h-11 w-full"
+            placeholder="How it felt…"
+          />
         </div>
+        <Button
+          class="h-12 w-full text-base sm:max-w-xs"
+          type="button"
+          :disabled="saving"
+          @click="finishWorkout"
+        >
+          {{ saving ? 'Saving…' : 'Finish workout' }}
+        </Button>
       </section>
 
-      <Button
-        v-if="selectedTemplateId && setRows.length"
-        class="h-12 w-full text-base"
-        type="button"
-        :disabled="saving"
-        @click="finishWorkout"
+      <!-- History -->
+      <section
+        v-if="selectedPlanId && recentSessions.length"
+        class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
       >
-        {{ saving ? 'Saving…' : 'Finish workout' }}
-      </Button>
-
-      <section v-if="selectedPlanId && recentSessions.length" class="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
         <button
           class="flex w-full items-center justify-between text-left"
           type="button"
@@ -286,16 +415,17 @@ const finishWorkout = async () => {
           <span class="text-sm font-medium">Recent sessions</span>
           <span class="text-muted-foreground text-xs">{{ showHistory ? 'Hide' : 'Show' }}</span>
         </button>
-        <ul v-if="showHistory" class="flex flex-col gap-3 text-sm">
+        <ul v-if="showHistory" class="grid grid-cols-1 gap-3 text-sm lg:grid-cols-2">
           <li
             v-for="s in recentSessions"
             :key="s.id"
-            class="text-muted-foreground border-b pb-3 last:border-0 last:pb-0"
+            class="bg-muted/30 rounded-lg border p-3"
           >
             <div class="text-foreground font-medium">
-              {{ s.workoutTemplateName }} — {{ new Date(s.performedAt).toLocaleString() }}
+              {{ s.workoutTemplateName }} —
+              {{ new Date(s.performedAt).toLocaleString() }}
             </div>
-            <ul class="mt-1 space-y-0.5">
+            <ul class="text-muted-foreground mt-1 space-y-0.5">
               <li v-for="set in s.sets" :key="set.id">
                 {{ set.exerciseNameSnapshot ?? 'Set' }} · {{ set.reps }} reps
                 <span v-if="set.weightLbs != null"> @ {{ set.weightLbs }} lb</span>
