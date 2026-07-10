@@ -468,5 +468,21 @@ const loadTasks = async () => {
 7. **Write tests for business logic**
 8. **Use lazy loading for route components**
 9. **Document custom API endpoints**
-10. **Keep database schema changes backward compatible**</content>
+10. **Keep database schema changes backward compatible**
+
+## Cursor Cloud specific instructions
+
+Environment: Node 22 (npm) and the .NET 9 SDK are preinstalled in the VM snapshot (`dotnet` is on `PATH` via `/usr/local/bin/dotnet`). The startup update script runs `npm install` (frontend) and `dotnet restore backend/Api`, so dependencies are already present — just start the services.
+
+Two services (both needed for the full-stack app to work end to end):
+
+- Frontend (Vue 3 + Vite): `cd frontend && npm run dev` → serves on `http://localhost:5173`.
+- Backend (.NET 9 Web API): serves the Swagger UI and CRUD API.
+
+Non-obvious gotchas:
+
+- Backend port: `dotnet run` alone uses `Properties/launchSettings.json`, which listens on port 5175. However, the frontend API client (`frontend/src/api/base/client.ts`) hardcodes `http://localhost:5000/api`, and the backend's CORS/startup messages assume port 5000. To make the frontend talk to the backend, start the backend on 5000 explicitly: `cd backend/Api && dotnet run --urls http://localhost:5000`.
+- `npm run test:unit` exits with code 1 and "No test files found" because this template ships no frontend tests yet — that is expected, not a setup failure. There is also no backend test project (`dotnet test` has nothing to run).
+- `npm run lint` currently reports pre-existing errors (shadcn-vue single-word component names and an unused `path` import in `vite.config.ts`); these are existing repo issues, unrelated to environment setup.
+- SQLite DB (`backend/Api/budget.db`) is auto-created on backend startup; delete it to reset. The backend registers no concrete controllers/entities yet, so Swagger shows "No operations defined in spec!" — expected for the template.</content>
 <parameter name="filePath">AGENTS.md
