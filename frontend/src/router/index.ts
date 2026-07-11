@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import ActiveWorkoutView from '@/views/ActiveWorkoutView.vue'
 import PlanDetailView from '@/views/PlanDetailView.vue'
 import PlanListView from '@/views/PlanListView.vue'
 import WorkoutView from '@/views/WorkoutView.vue'
@@ -31,6 +32,14 @@ const router = createRouter({
       path: '/workout',
       name: 'workout',
       component: WorkoutView,
+    },
+    {
+      path: '/workout/active',
+      name: 'workout-active',
+      component: ActiveWorkoutView,
+      meta: {
+        isolated: true,
+      },
     },
   ],
 })

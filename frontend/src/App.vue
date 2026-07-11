@@ -9,6 +9,8 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 
 const route = useRoute()
 
+const isIsolated = computed(() => route.meta.isolated === true)
+
 const routeInfo: Record<string, { label: string; icon: typeof Dumbbell }> = {
   plan: { label: 'Plan', icon: ClipboardList },
   'plan-detail': { label: 'Plan setup', icon: ClipboardList },
@@ -33,7 +35,13 @@ const breadcrumbs = computed(() => {
 </script>
 
 <template>
-  <SidebarProvider>
+  <div
+    v-if="isIsolated"
+    class="h-full min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain"
+  >
+    <router-view />
+  </div>
+  <SidebarProvider v-else>
     <AppSidebar />
     <SidebarInset class="min-h-0 min-h-svh">
       <header class="flex h-14 shrink-0 items-center gap-2 border-b px-4">

@@ -1,57 +1,38 @@
 <script setup lang="ts">
 import { Activity, Dumbbell, Flame, Weight } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { runRequest } from '@/api/base/client'
 import { planApi } from '@/api/planApi'
-import { scheduleApi } from '@/api/scheduleApi'
 import { workoutSessionApi } from '@/api/workoutSessionApi'
 import { workoutTemplateApi } from '@/api/workoutTemplateApi'
-import type { Plan, ScheduleResponse, WorkoutSessionResponse, WorkoutTemplate } from '@/api/types/schema'
+import type { Plan, WorkoutSessionResponse, WorkoutTemplate } from '@/api/types/schema'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 const LAST_PLAN_KEY = 'workout.lastPlanId'
 
-interface SetInputRow {
-  exerciseDefinitionId: number | null
-  exerciseNameSnapshot: string
-  setLabel: string
-  setIndex: number
-  reps: number
-  weightLbs?: number
-}
+const router = useRouter()
+const route = useRoute()
 
 const plans = ref<Plan[]>([])
 const selectedPlanId = ref(0)
 const templates = ref<WorkoutTemplate[]>([])
-const schedule = ref<ScheduleResponse | null>(null)
 const recentSessions = ref<WorkoutSessionResponse[]>([])
-
 const selectedTemplateId = ref(0)
-const setRows = ref<SetInputRow[]>([])
-const sessionNotes = ref('')
 const showHistory = ref(false)
 
 const loading = ref(true)
-const saving = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
 
-const templatesById = computed(() => {
-  const m = new Map<number, WorkoutTemplate>()
-  for (const t of templates.value) m.set(t.id, t)
-  return m
-})
+const selectedTemplate = computed(() =>
+  templates.value.find((t) => t.id === selectedTemplateId.value) ?? null,
+)
 
-const scheduleHints = computed(() => {
-  const sch = schedule.value
-  if (!sch || sch.slots.length === 0) return []
-  return sch.slots.map((s) => ({
-    label: `Week ${s.weekIndex + 1} · session ${s.sessionIndex + 1}`,
-    templateName: s.workoutTemplateName,
-    templateId: s.workoutTemplateId,
-  }))
+const canStart = computed(() => {
+  const t = selectedTemplate.value
+  return Boolean(selectedPlanId.value && t && t.exercises.length > 0)
 })
 
 const totalWorkouts = computed(() => recentSessions.value.length)
@@ -82,7 +63,6 @@ const currentStreak = computed(() => {
   cursor.setHours(0, 0, 0, 0)
   const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 
-  // If nothing today, start from the most recent session day
   if (!days.has(key(cursor))) {
     const latest = recentSessions.value
       .map((s) => new Date(s.performedAt).getTime())
@@ -106,25 +86,6 @@ const formatWeight = (lbs: number) => {
   return lbs.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
 
-const rebuildSets = (t: WorkoutTemplate) => {
-  const rows: SetInputRow[] = []
-  let setIndex = 1
-  const exercises = [...t.exercises].sort((a, b) => a.sortOrder - b.sortOrder)
-  for (const ex of exercises) {
-    for (let s = 0; s < ex.targetSets; s++) {
-      rows.push({
-        exerciseDefinitionId: ex.id,
-        exerciseNameSnapshot: ex.name,
-        setLabel: `${ex.name} · set ${s + 1}`,
-        setIndex: setIndex++,
-        reps: ex.targetReps,
-        ...(ex.targetWeightLbs != null ? { weightLbs: ex.targetWeightLbs } : {}),
-      })
-    }
-  }
-  setRows.value = rows
-}
-
 const loadPlans = async () => {
   const list = await runRequest(planApi.getAll())
   plans.value = [...list]
@@ -140,20 +101,16 @@ const loadPlanContext = async () => {
   const id = selectedPlanId.value
   if (!id) {
     templates.value = []
-    schedule.value = null
     recentSessions.value = []
     selectedTemplateId.value = 0
-    setRows.value = []
     return
   }
   localStorage.setItem(LAST_PLAN_KEY, String(id))
-  const [t, sch, sessions] = await Promise.all([
+  const [t, sessions] = await Promise.all([
     workoutTemplateApi.getByPlan(id),
-    scheduleApi.get(id),
     workoutSessionApi.listForPlan(id, 100),
   ])
   templates.value = [...t]
-  schedule.value = sch
   recentSessions.value = [...sessions]
   if (!t.some((x) => x.id === selectedTemplateId.value)) {
     selectedTemplateId.value = t[0]?.id ?? 0
@@ -166,6 +123,11 @@ const init = async () => {
   try {
     await loadPlans()
     await loadPlanContext()
+    if (route.query.saved === '1') {
+      success.value = 'Workout saved.'
+      const { saved: _saved, ...rest } = route.query
+      void router.replace({ query: rest })
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not load data.'
   } finally {
@@ -189,56 +151,15 @@ watch(selectedPlanId, () => {
   })()
 })
 
-watch(selectedTemplateId, (tid) => {
-  if (!tid) {
-    setRows.value = []
-    return
-  }
-  const t = templatesById.value.get(tid)
-  if (t) rebuildSets(t)
-})
-
-const finishWorkout = async () => {
-  success.value = null
-  if (!selectedPlanId.value || !selectedTemplateId.value) {
-    error.value = 'Choose a plan and workout.'
-    return
-  }
-  if (!setRows.value.length) {
-    error.value = 'This workout has no sets to log. Edit it in Plan setup.'
-    return
-  }
-
-  saving.value = true
-  error.value = null
-  try {
-    await workoutSessionApi.create({
-      planId: selectedPlanId.value,
-      workoutTemplateId: selectedTemplateId.value,
-      performedAt: new Date().toISOString(),
-      notes: sessionNotes.value.trim() ? sessionNotes.value.trim() : null,
-      sets: setRows.value.map((r) => ({
-        exerciseDefinitionId: r.exerciseDefinitionId,
-        exerciseNameSnapshot: r.exerciseNameSnapshot,
-        setIndex: r.setIndex,
-        reps: Number.isFinite(r.reps) ? r.reps : 0,
-        weightLbs:
-          r.weightLbs === undefined ||
-          (typeof r.weightLbs === 'number' && Number.isNaN(r.weightLbs))
-            ? null
-            : r.weightLbs,
-      })),
-    })
-    sessionNotes.value = ''
-    success.value = 'Workout saved.'
-    await loadPlanContext()
-    const t = templatesById.value.get(selectedTemplateId.value)
-    if (t) rebuildSets(t)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not save workout.'
-  } finally {
-    saving.value = false
-  }
+const startWorkout = () => {
+  if (!canStart.value) return
+  void router.push({
+    name: 'workout-active',
+    query: {
+      planId: String(selectedPlanId.value),
+      templateId: String(selectedTemplateId.value),
+    },
+  })
 }
 </script>
 
@@ -247,7 +168,7 @@ const finishWorkout = async () => {
     <header class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
       <div class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Workout</h1>
-        <p class="text-muted-foreground text-sm">Log today’s session. Set up plans under Plan.</p>
+        <p class="text-muted-foreground text-sm">Pick today’s session, then start logging.</p>
       </div>
     </header>
 
@@ -331,75 +252,31 @@ const finishWorkout = async () => {
             <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
           </select>
           <p v-if="!templates.length" class="text-muted-foreground text-sm">Add workouts in Plan setup.</p>
+          <p
+            v-else-if="selectedTemplate && !selectedTemplate.exercises.length"
+            class="text-muted-foreground text-sm"
+          >
+            This workout has no exercises yet. Add some in Plan setup.
+          </p>
         </div>
       </section>
 
-      <!-- Schedule -->
       <section
-        v-if="selectedPlanId"
-        class="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+        v-if="selectedPlanId && templates.length"
+        class="flex w-full flex-col items-center gap-2"
       >
-        <h2 class="text-sm font-medium">Schedule</h2>
-        <p v-if="!scheduleHints.length" class="text-muted-foreground text-sm">
-          No schedule saved for this plan.
-        </p>
-        <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <div
-            v-for="(h, i) in scheduleHints"
-            :key="i"
-            class="bg-muted/40 flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm"
-          >
-            <span class="text-muted-foreground">{{ h.label }}</span>
-            <span class="font-medium">{{ h.templateName }}</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Sets -->
-      <section
-        v-if="selectedTemplateId && setRows.length"
-        class="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
-      >
-        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h2 class="text-sm font-medium">Sets</h2>
-          <p class="text-muted-foreground text-xs">{{ setRows.length }} sets to log</p>
-        </div>
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div
-            v-for="row in setRows"
-            :key="row.setIndex"
-            class="space-y-2 rounded-lg border bg-background/60 p-3 sm:p-4"
-          >
-            <div class="text-sm font-medium">{{ row.setLabel }}</div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-muted-foreground text-xs">Reps</label>
-                <Input v-model.number="row.reps" class="h-11 w-full" min="0" type="number" />
-              </div>
-              <div>
-                <label class="text-muted-foreground text-xs">Weight (lbs)</label>
-                <Input v-model.number="row.weightLbs" class="h-11 w-full" step="0.5" type="number" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="max-w-md space-y-2">
-          <label class="text-sm font-medium" for="session-notes">Notes (optional)</label>
-          <Input
-            id="session-notes"
-            v-model="sessionNotes"
-            class="h-11 w-full"
-            placeholder="How it felt…"
-          />
-        </div>
         <Button
-          class="h-12 w-full text-base sm:max-w-xs"
+          class="h-14 w-full text-base font-semibold tracking-wide uppercase"
           type="button"
-          :disabled="saving"
-          @click="finishWorkout"
+          :disabled="!canStart"
+          @click="startWorkout"
         >
-          {{ saving ? 'Saving…' : 'Finish workout' }}
+          Start Workout
         </Button>
+        <p v-if="selectedTemplate" class="text-muted-foreground text-center text-xs">
+          {{ selectedTemplate.name }} · {{ selectedTemplate.exercises.length }}
+          {{ selectedTemplate.exercises.length === 1 ? 'exercise' : 'exercises' }}
+        </p>
       </section>
 
       <!-- History -->
